@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>USDC Transfer Indexer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 0 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .endpoint {
+            font-weight: bold;
+            color: #0066cc;
+        }
+        a {
+            color: #0066cc;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .api-box {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Lobster internship project</h1>
+    <h3>By: <a href="https://github.com/ptPierre/">Pierre</a></h3>
+    
+    <p>This application indexes USDC transfers from the Ethereum blockchain and provides an API to query them.</p>
+    
+    <div class="api-box">
+        <h2>API Documentation</h2>
+        
+        <h3>Transfers Endpoint</h3>
+        <p class="endpoint">GET <a href="/eth/transfers">/eth/transfers</a></p>
+        
+        <p>Returns a list of USDC transfers with pagination support.</p>
+        
+        <h4>Query Parameters:</h4>
+        <ul>
+            <li><strong>limit</strong> - Number of records to return (default: 10)</li>
+            <li><strong>page</strong> - Page number for pagination (default: 1)</li>
+        </ul>
+        
+        <h4>Example:</h4>
+        <a href="/eth/transfers?limit=2">/eth/transfers?limit=2</a> - Get 2 transfers
+        
+        <h4>Sample Response:</h4>
+        <pre>{
+  "total": 2,
+  "page": 1,
+  "limit": 2,
+  "transfers": [
+    {
+      "from": "0x6d7be3c8fce0de1ac8594c0daecc84441dff0b81",
+      "to": "0x57e592d4451f02d88648579bea324bfd3bf52d8e",
+      "value": "120001 USDC",
+      "block_number": 22018327,
+      "tx_hash": "0x62c06dd645a53eed266b5ea194fd962e649de03dfad4475679f2e40a4da0e278"
+    },
+    {
+      "from": "0x3fc91a3afd70395cd496c647d5a6cc9d4b2b7fad",
+      "to": "0x3e0c77c54aa725063fd413ba060408c09acdf2b7",
+      "value": "300000 USDC",
+      "block_number": 22018320,
+      "tx_hash": "0x4d4dfa7118c49a628ef6a0ad55c2244eee48fabd13a9b9d3f5abac6e9f4a3a7a"
+    }
+  ]
+}</pre>
+    </div>
+</body>
+</html> 
