@@ -1,0 +1,25 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "name": "token", "type": "address"},
+      {"indexed": true, "name": "from", "type": "address"},
+      {"indexed": true, "name": "to", "type": "address"},
+      {"indexed": false, "name": "amount", "type": "uint256"},
+      {"indexed": false, "name": "nonce", "type": "uint256"}
+    ],
+    "name": "Deposit",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "name": "token", "type": "address"},
+      {"indexed": true, "name": "to", "type": "address"},
+      {"indexed": false, "name": "amount", "type": "uint256"},
+      {"indexed": false, "name": "nonce", "type": "uint256"}
+    ],
+    "name": "Distribution",
+    "type": "event"
+  }
+] 

@@ -1,4 +1,4 @@
-pub mod transfers;
+pub mod bridge;
 
 pub struct AppState {
     pub db: sqlx::PgPool,

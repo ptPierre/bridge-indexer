@@ -8,11 +8,11 @@ pub mod utils;
 use clap::Parser;
 use eyre::Result;
 use rocket::{Build, Rocket};
-use api::transfers::get_transfers;
+use api::bridge::get_bridge_events;
 use tokio::task;
 
-#[derive(Parser, Debug)]
-#[clap(author, version, about = "Lobster - USDC Transfer Indexer + API")]
+#[derive(Parser, Debug, Clone)]
+#[clap(author, version, about = "Lobster - Bridge Event Indexer + API")]
 pub struct AppArgs {
     /// Days to go back in history (default 0, real-time only)
     #[clap(short, long)]
@@ -35,12 +35,12 @@ pub struct AppArgs {
 pub async fn start_app(args: AppArgs) -> Result<Rocket<Build>> {
     use std::env;
     use rocket::response::content::RawHtml;
-    use services::indexer::{start_indexer, IndexerConfig};
+    use services::bridge_indexer::{start_bridge_indexer, BridgeIndexerConfig};
 
     println!("Starting application...");
     
     // Create indexer config from command line args
-    let config = IndexerConfig {
+    let config = BridgeIndexerConfig {
         days_to_backfill: args.days,
         start_block: args.start_block,
         batch_size: args.batch_size,
@@ -49,13 +49,13 @@ pub async fn start_app(args: AppArgs) -> Result<Rocket<Build>> {
     // Start the indexer in a background task unless --api-only flag is given
     if !args.api_only {
         task::spawn(async move {
-            match start_indexer(config).await {
-                Ok(_) => println!("Indexer completed successfully"),
-                Err(e) => eprintln!("Indexer error: {:?}", e),
+            match start_bridge_indexer(config).await {
+                Ok(_) => println!("Bridge indexer completed successfully"),
+                Err(e) => eprintln!("Bridge indexer error: {:?}", e),
             }
         });
         
-        println!("Indexer started in background");
+        println!("Bridge indexer started in background");
     } else {
         println!("Running in API-only mode (indexer disabled)");
     }
@@ -81,7 +81,7 @@ pub async fn start_app(args: AppArgs) -> Result<Rocket<Build>> {
     let rocket = rocket::build()
         .mount("/", routes![index])
         .mount("/eth", routes![
-            get_transfers
+            get_bridge_events
         ])
         .manage(app_state)
         .configure(rocket::Config::figment().merge(("json.pretty", true)));

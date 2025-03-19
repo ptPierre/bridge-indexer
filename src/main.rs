@@ -1,8 +1,8 @@
-mod api;
-mod models;
-mod services;
-mod repositories;
-mod utils;
+pub mod api;
+pub mod models;
+pub mod services;
+pub mod repositories;
+pub mod utils;
 
 
 use dotenv::dotenv;

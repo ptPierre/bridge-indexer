@@ -1,7 +1,7 @@
-# Lobster Blockchain Indexer
-(The coolest web3 startup out there)
+# Bridge Indexer
 
-A blockchain indexing service that tracks token transfers on Ethereum mainnet and provides an API to query the indexed data.
+
+A blockchain indexing service that tracks a token bridge between Holesky and Sepolia and provides an API to query the indexed data.
 
 ## Features
 
@@ -31,7 +31,7 @@ A blockchain indexing service that tracks token transfers on Ethereum mainnet an
 ``` 
 2. Getting USDC transfers
 ```
-/eth/transfers
+/bridge/events
 ```
 ## Project Structure
 

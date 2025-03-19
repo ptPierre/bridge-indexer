@@ -26,8 +26,8 @@ name = "lobster"
 path = "src/main.rs"
 
 [[bin]]
-name = "indexer"
-path = "src/bin/indexer.rs"
+name = "bridge_indexer"
+path = "src/bin/bridge_indexer.rs"
 
 [package.metadata.sqlx]
 migrations = "migrations"

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>USDC Transfer Indexer</title>
+    <title>Blockchain Bridge Indexer</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -44,47 +44,59 @@
     </style>
 </head>
 <body>
-    <h1>Lobster internship project</h1>
-    <h3>By: <a href="https://github.com/ptPierre/">Pierre</a></h3>
+    <h1>Lobster Bridge Indexer</h1>
     
-    <p>This application indexes USDC transfers from the Ethereum blockchain and provides an API to query them.</p>
+    <p>This application indexes bridge events (Deposit and Distribution) from the Sepolia and Holesky networks and provides an API to query them.</p>
     
     <div class="api-box">
         <h2>API Documentation</h2>
         
-        <h3>Transfers Endpoint</h3>
-        <p class="endpoint">GET <a href="/eth/transfers">/eth/transfers</a></p>
+        <h3>Bridge Events Endpoint</h3>
+        <p class="endpoint">GET <a href="/eth/bridge/events">/eth/bridge/events</a></p>
         
-        <p>Returns a list of USDC transfers with pagination support.</p>
+        <p>Returns a list of bridge events with pagination support.</p>
         
         <h4>Query Parameters:</h4>
         <ul>
+            <li><strong>event_type</strong> - Filter by event type (Deposit or Distribution)</li>
+            <li><strong>network</strong> - Filter by network (sepolia or holesky)</li>
             <li><strong>limit</strong> - Number of records to return (default: 10)</li>
             <li><strong>page</strong> - Page number for pagination (default: 1)</li>
         </ul>
         
-        <h4>Example:</h4>
-        <a href="/eth/transfers?limit=2">/eth/transfers?limit=2</a> - Get 2 transfers
+        <h4>Examples:</h4>
+        <ul>
+            <li><a href="/eth/bridge/events?limit=5">/eth/bridge/events?limit=5</a> - Get 5 bridge events</li>
+            <li><a href="/eth/bridge/events?event_type=Deposit">/eth/bridge/events?event_type=Deposit</a> - Get only Deposit events</li>
+            <li><a href="/eth/bridge/events?network=sepolia">/eth/bridge/events?network=sepolia</a> - Get only Sepolia network events</li>
+        </ul>
         
         <h4>Sample Response:</h4>
         <pre>{
   "total": 2,
   "page": 1,
   "limit": 2,
-  "transfers": [
+  "events": [
     {
-      "from": "0x6d7be3c8fce0de1ac8594c0daecc84441dff0b81",
-      "to": "0x57e592d4451f02d88648579bea324bfd3bf52d8e",
-      "value": "120001 USDC",
-      "block_number": 22018327,
-      "tx_hash": "0x62c06dd645a53eed266b5ea194fd962e649de03dfad4475679f2e40a4da0e278"
+      "event_type": "Deposit",
+      "network": "sepolia",
+      "token": "0x8267cF9254734C6Eb452a7bb9AAF97B392258b21",
+      "from": "0x8943c7bac232f50e4cc76f40e88a7461b1a23c47",
+      "to": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
+      "amount": "1000000000000000000 tokens",
+      "nonce": 5,
+      "block_number": 4215780,
+      "tx_hash": "0x8c5f91d0c25c8ab4d5903c487ecefca2f1d78a5843e174fcf98c496da91ed4be"
     },
     {
-      "from": "0x3fc91a3afd70395cd496c647d5a6cc9d4b2b7fad",
-      "to": "0x3e0c77c54aa725063fd413ba060408c09acdf2b7",
-      "value": "300000 USDC",
-      "block_number": 22018320,
-      "tx_hash": "0x4d4dfa7118c49a628ef6a0ad55c2244eee48fabd13a9b9d3f5abac6e9f4a3a7a"
+      "event_type": "Distribution",
+      "network": "holesky",
+      "token": "0x25c2f407c9deb295d8e636ed696ca6f1e7d8bc18",
+      "to": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
+      "amount": "1000000000000000000 tokens",
+      "nonce": 5,
+      "block_number": 664932,
+      "tx_hash": "0x9a7c41f73db1e22937dbc7f598269d3cfcbb48d892683c69f8d9626eb5eb185d"
     }
   ]
 }</pre>

@@ -1,10 +1,10 @@
 use dotenv::dotenv;
-use lobster::services::indexer::{start_indexer, IndexerConfig};
+use lobster::services::bridge_indexer;
 use clap::Parser;
 use eyre::Result;
 
-#[derive(Parser, Debug)]
-#[clap(author, version, about = "USDC Transfer Indexer")]
+#[derive(Parser, Debug, Clone)]
+#[clap(author, version, about = "Bridge Event Indexer")]
 struct Args {
     /// Days to go back in history (default: 0, meaning real-time only)
     #[clap(short, long)]
@@ -27,12 +27,12 @@ async fn main() -> Result<()> {
     let args = Args::parse();
     
     // Create indexer config
-    let config = IndexerConfig {
+    let config = bridge_indexer::BridgeIndexerConfig {
         days_to_backfill: args.days,
         start_block: args.start_block,
         batch_size: args.batch_size,
     };
     
-    // Start indexer
-    start_indexer(config).await
+    // Start bridge indexer
+    bridge_indexer::start_bridge_indexer(config).await
 } 

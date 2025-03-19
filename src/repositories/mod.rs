@@ -1,7 +1,7 @@
 use sqlx::PgPool;
 use eyre::Result;
 
-pub mod transfers;
+pub mod bridge;
 
 pub async fn init_db(database_url: &str) -> Result<PgPool> {
     // Create the connection pool
