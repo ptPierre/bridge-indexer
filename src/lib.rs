@@ -35,21 +35,15 @@ pub struct AppArgs {
 pub async fn start_app(args: AppArgs) -> Result<Rocket<Build>> {
     use std::env;
     use rocket::response::content::RawHtml;
-    use services::bridge_indexer::{start_bridge_indexer, BridgeIndexerConfig};
+    use services::bridge_indexer;
 
     println!("Starting application...");
     
-    // Create indexer config from command line args
-    let config = BridgeIndexerConfig {
-        days_to_backfill: args.days,
-        start_block: args.start_block,
-        batch_size: args.batch_size,
-    };
-    
+
     // Start the indexer in a background task unless --api-only flag is given
     if !args.api_only {
         task::spawn(async move {
-            match start_bridge_indexer(config).await {
+            match bridge_indexer::start_bridge_indexer().await {
                 Ok(_) => println!("Bridge indexer completed successfully"),
                 Err(e) => eprintln!("Bridge indexer error: {:?}", e),
             }

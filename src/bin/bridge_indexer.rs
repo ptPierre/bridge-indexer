@@ -6,15 +6,7 @@ use eyre::Result;
 #[derive(Parser, Debug, Clone)]
 #[clap(author, version, about = "Bridge Event Indexer")]
 struct Args {
-    /// Days to go back in history (default: 0, meaning real-time only)
-    #[clap(short, long)]
-    days: Option<u64>,
-    
-    /// Start block (overrides days)
-    #[clap(short, long)]
-    start_block: Option<u64>,
-    
-    /// Batch size for processing historical blocks
+    /// Batch size for event processing
     #[clap(short, long, default_value = "100")]
     batch_size: u64,
 }
@@ -28,11 +20,9 @@ async fn main() -> Result<()> {
     
     // Create indexer config
     let config = bridge_indexer::BridgeIndexerConfig {
-        days_to_backfill: args.days,
-        start_block: args.start_block,
         batch_size: args.batch_size,
     };
     
     // Start bridge indexer
-    bridge_indexer::start_bridge_indexer(config).await
+    bridge_indexer::start_bridge_indexer().await
 } 

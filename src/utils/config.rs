@@ -5,13 +5,13 @@ pub mod contracts {
     
     /// Bridge contract address on Sepolia
     pub fn sepolia_bridge_address() -> Address {
-        Address::from_str("0x2a38252581c233354954BD504ba72cEC72b734D8")
+        Address::from_str("0xC57ef84129ee3d73d558c2AE69503060e328d494")
             .expect("Invalid Sepolia bridge address")
     }
     
     /// Bridge contract address on Holesky
     pub fn holesky_bridge_address() -> Address {
-        Address::from_str("0x4Db9491807Ff647911bb7f31717f0EE8fE893e73")
+        Address::from_str("0x1533600886E59FD9FC1Af1c801C38D4dD9582935")
             .expect("Invalid Holesky bridge address")
     }
 }
