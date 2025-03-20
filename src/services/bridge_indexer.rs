@@ -184,6 +184,22 @@ async fn monitor_network_events(
     let holesky_http = Http::new(&holesky_http_url)?;
     let holesky_web3 = Web3::new(holesky_http);
     
+    // Add the new event definitions
+    let abi_path = Path::new("src/abis/bridge.json");
+    let bridge_abi = load_abi(abi_path)?;
+    
+    // Get the swap events from the ABI
+    let swap_deposit_event = bridge_abi.event("SwapDeposit")
+        .map_err(|e| eyre::eyre!("Failed to get SwapDeposit event: {:?}", e))?;
+    let swap_distribution_event = bridge_abi.event("SwapDistribution")
+        .map_err(|e| eyre::eyre!("Failed to get SwapDistribution event: {:?}", e))?;
+    
+    // Get all event signatures
+    let deposit_signature = deposit_event.signature();
+    let distribution_signature = distribution_event.signature();
+    let swap_deposit_signature = swap_deposit_event.signature();
+    let swap_distribution_signature = swap_distribution_event.signature();
+    
     // Create distribute function signature
     let distribute_function = Function {
         name: "distribute".into(),
@@ -198,9 +214,20 @@ async fn monitor_network_events(
         state_mutability: web3::ethabi::StateMutability::NonPayable,
     };
     
-    // Get signatures
-    let deposit_signature = deposit_event.signature();
-    let distribution_signature = distribution_event.signature();
+    // Create swap distribute function signature
+    let swap_distribute_function = Function {
+        name: "swapDistribute".into(),
+        inputs: vec![
+            Param { name: "sourceToken".into(), kind: ParamType::Address, internal_type: None },
+            Param { name: "targetToken".into(), kind: ParamType::Address, internal_type: None },
+            Param { name: "recipient".into(), kind: ParamType::Address, internal_type: None },
+            Param { name: "sourceAmount".into(), kind: ParamType::Uint(256), internal_type: None },
+            Param { name: "nonce".into(), kind: ParamType::Uint(256), internal_type: None },
+        ],
+        outputs: vec![],
+        constant: false,
+        state_mutability: web3::ethabi::StateMutability::NonPayable,
+    };
     
     // Process logs as they arrive
     while let Some(log) = logs_stream.next().await {
@@ -218,11 +245,10 @@ async fn monitor_network_events(
                 
                 // Convert to raw log for ethabi
                 let raw_log = RawLog {
-                    topics: log.topics,  // This moves log.topics
+                    topics: log.topics,
                     data: log.data.0,
                 };
                 
-                // Now use first_topic for comparisons
                 if first_topic == deposit_signature {
                     // Decoding the Deposit event
                     match deposit_event.parse_log(raw_log) {
@@ -286,7 +312,7 @@ async fn monitor_network_events(
                                 Ok(key) => key,
                                 Err(e) => {
                                     eprintln!("⚠️ Error parsing private key: {:?}", e);
-                                    return Err(e.into()); // Handle error appropriately
+                                    return Err(e.into());
                                 }
                             };
                             let public_key = PublicKey::from_secret_key(&secp, &secret_key);
@@ -367,6 +393,159 @@ async fn monitor_network_events(
                         },
                         Err(e) => eprintln!("❌ Error decoding distribution event: {:?}", e),
                     }
+                } else if first_topic == swap_deposit_signature {
+                    // New SwapDeposit event handling
+                    match swap_deposit_event.parse_log(raw_log) {
+                        Ok(decoded_log) => {
+                            // Extract SwapDeposit params
+                            let source_token = decoded_log.params[0].value.clone().into_address().unwrap();
+                            let target_token = decoded_log.params[1].value.clone().into_address().unwrap();
+                            let from = decoded_log.params[2].value.clone().into_address().unwrap();
+                            let to = decoded_log.params[3].value.clone().into_address().unwrap();
+                            let source_amount = decoded_log.params[4].value.clone().into_uint().unwrap();
+                            let nonce = decoded_log.params[5].value.clone().into_uint().unwrap();
+                            
+                            println!("  Event:         🔄 SwapDeposit");
+                            println!("  SourceToken:   {:?}", source_token);
+                            println!("  TargetToken:   {:?}", target_token);
+                            println!("  From:          {:?}", from);
+                            println!("  To:            {:?}", to);
+                            println!("  SourceAmount:  {}", source_amount);
+                            println!("  Nonce:         {}", nonce);
+                            
+                            // Create bridge event record and save directly
+                            // Note: You'll need to update your BridgeEvent model to support swap events
+                            match BridgeEvent::new_swap_deposit(
+                                network, source_token, target_token, from, to, source_amount, nonce, block_number, tx_hash.clone()
+                            ) {
+                                Ok(event) => {
+                                    if let Err(e) = bridge_repo::save_bridge_event(&pool, &event).await {
+                                        eprintln!("❌ Error saving swap deposit event: {:?}", e);
+                                    } else {
+                                        println!("✅ Saved swap deposit event to database");
+                                    }
+                                },
+                                Err(e) => eprintln!("❌ Error creating swap deposit event record: {:?}", e),
+                            }
+                            
+                            // Create swap distribution transaction on the other chain
+                            let (target_network, target_web3, target_address, source_token_address, target_token_address, target_chain_id) = if network == "sepolia" {
+                                ("holesky", &holesky_web3, contracts::holesky_bridge_address(), SEPOLIA_TOKEN_ADDRESS, HOLESKY_TOKEN_ADDRESS, HOLESKY_CHAIN_ID)
+                            } else {
+                                ("sepolia", &sepolia_web3, contracts::sepolia_bridge_address(), HOLESKY_TOKEN_ADDRESS, SEPOLIA_TOKEN_ADDRESS, SEPOLIA_CHAIN_ID)
+                            };
+                            
+                            println!("\n🔄 Creating swap distribution transaction on {} network", target_network);
+                            println!("  Target bridge:   {:?}", target_address);
+                            println!("  Source Token:    {}", source_token_address);
+                            println!("  Target Token:    {}", target_token_address);
+                            println!("  Recipient:       {:?}", to);
+                            println!("  Source Amount:   {}", source_amount);
+                            println!("  Nonce:           {}", nonce);
+                            
+                            // Create function call data for swapDistribute
+                            let source_token_addr = Address::from_str(source_token_address).expect("Invalid source token address");
+                            let target_token_addr = Address::from_str(target_token_address).expect("Invalid target token address");
+                            
+                            let call_data = swap_distribute_function.encode_input(&[
+                                Token::Address(source_token_addr),
+                                Token::Address(target_token_addr),
+                                Token::Address(to),
+                                Token::Uint(source_amount),
+                                Token::Uint(nonce),
+                            ])?;
+                            
+                            // Parse the private key and derive the from address
+                            let secp = Secp256k1::new();
+                            let secret_key = match SecretKey::from_str(&private_key_hex) {
+                                Ok(key) => key,
+                                Err(e) => {
+                                    eprintln!("⚠️ Error parsing private key: {:?}", e);
+                                    return Err(e.into());
+                                }
+                            };
+                            let public_key = PublicKey::from_secret_key(&secp, &secret_key);
+                            let from_address = public_key_to_address(&public_key);
+
+                            // Create transaction parameters
+                            let mut tx_request = TransactionParameters {
+                                to: Some(target_address),
+                                data: call_data.clone().into(),
+                                gas: U256::from(400000), // May need more gas for swaps
+                                chain_id: Some(target_chain_id),
+                                ..Default::default()
+                            };
+
+                            // Get gas price and nonce
+                            if let Ok(gas_price) = target_web3.eth().gas_price().await {
+                                tx_request.gas_price = Some(gas_price);
+                            }
+                            if let Ok(nonce) = target_web3.eth().transaction_count(from_address, None).await {
+                                tx_request.nonce = Some(nonce);
+                            }
+
+                            // Sign and send the transaction
+                            let unsigned_rlp = encode_unsigned_transaction(&tx_request, target_chain_id);
+                            let hash = web3::signing::keccak256(&unsigned_rlp);
+                            let message = Message::from_slice(&hash)?;
+                            let signature = secp.sign(&message, &secret_key);
+                            let sig_bytes = signature.serialize_compact();
+                            let rec_id = 0;
+                            let r = &sig_bytes[0..32];
+                            let s = &sig_bytes[32..64];
+                            let v = target_chain_id * 2 + 35 + rec_id as u64;
+                            let raw_tx = encode_signed_transaction(&tx_request, v, r, s);
+
+                            // Send the raw transaction
+                            match target_web3.eth().send_raw_transaction(raw_tx.into()).await {
+                                Ok(tx_hash) => {
+                                    println!("🚀 Swap distribution transaction sent: {:?}", tx_hash);
+                                }
+                                Err(e) => {
+                                    eprintln!("⚠️ Error sending swap transaction: {:?}", e);
+                                }
+                            }
+                        },
+                        Err(e) => eprintln!("❌ Error decoding swap deposit event: {:?}", e),
+                    }
+                } else if first_topic == swap_distribution_signature {
+                    // Handle SwapDistribution event
+                    match swap_distribution_event.parse_log(raw_log) {
+                        Ok(decoded_log) => {
+                            // Extract SwapDistribution params
+                            let source_token = decoded_log.params[0].value.clone().into_address().unwrap();
+                            let target_token = decoded_log.params[1].value.clone().into_address().unwrap();
+                            let to = decoded_log.params[2].value.clone().into_address().unwrap();
+                            let source_amount = decoded_log.params[3].value.clone().into_uint().unwrap();
+                            let target_amount = decoded_log.params[4].value.clone().into_uint().unwrap();
+                            let nonce = decoded_log.params[5].value.clone().into_uint().unwrap();
+                            
+                            println!("  Event:         🔀 SwapDistribution");
+                            println!("  SourceToken:   {:?}", source_token);
+                            println!("  TargetToken:   {:?}", target_token);
+                            println!("  To:            {:?}", to);
+                            println!("  SourceAmount:  {}", source_amount);
+                            println!("  TargetAmount:  {}", target_amount);
+                            println!("  Nonce:         {}", nonce);
+                            
+                            // Create and save event record
+                            match BridgeEvent::new_swap_distribution(
+                                network, source_token, target_token, to, source_amount, target_amount, nonce, block_number, tx_hash.clone()
+                            ) {
+                                Ok(event) => {
+                                    if let Err(e) = bridge_repo::save_bridge_event(&pool, &event).await {
+                                        eprintln!("❌ Error saving swap distribution event: {:?}", e);
+                                    } else {
+                                        println!("✅ Saved swap distribution event to database");
+                                    }
+                                },
+                                Err(e) => eprintln!("❌ Error creating swap distribution event record: {:?}", e),
+                            }
+                        },
+                        Err(e) => eprintln!("❌ Error decoding swap distribution event: {:?}", e),
+                    }
+                } else {
+                    println!("⚠️ Unknown event signature: {:?}", first_topic);
                 }
                 
                 println!();

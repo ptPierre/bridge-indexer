@@ -14,7 +14,7 @@ pub async fn get_bridge_events(
         BridgeEvent,
         r#"
             SELECT id, event_type, network, token_address, from_address, to_address, 
-                amount, nonce, block_number, tx_hash
+                amount, nonce, block_number, tx_hash, source_token, target_token, target_amount
             FROM bridge_events
             WHERE ($1::text IS NULL OR event_type = $1)
             AND ($2::text IS NULL OR network = $2)
