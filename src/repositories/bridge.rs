@@ -38,8 +38,9 @@ pub async fn save_bridge_event(pool: &PgPool, event: &BridgeEvent) -> Result<()>
     sqlx::query!(
         r#"
         INSERT INTO bridge_events 
-            (event_type, network, token_address, from_address, to_address, amount, nonce, block_number, tx_hash) 
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            (event_type, network, token_address, from_address, to_address, amount, nonce, block_number, tx_hash, 
+             source_token, target_token, target_amount) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         "#,
         event.event_type,
         event.network,
@@ -49,7 +50,10 @@ pub async fn save_bridge_event(pool: &PgPool, event: &BridgeEvent) -> Result<()>
         event.amount,
         event.nonce,
         event.block_number,
-        event.tx_hash
+        event.tx_hash,
+        event.source_token,
+        event.target_token,
+        event.target_amount
     )
     .execute(pool)
     .await?;
@@ -66,8 +70,9 @@ pub async fn save_batch(pool: &PgPool, events: &[BridgeEvent]) -> Result<()> {
         sqlx::query!(
             r#"
             INSERT INTO bridge_events 
-                (event_type, network, token_address, from_address, to_address, amount, nonce, block_number, tx_hash) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                (event_type, network, token_address, from_address, to_address, amount, nonce, block_number, tx_hash,
+                 source_token, target_token, target_amount) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             "#,
             event.event_type,
             event.network,
@@ -77,7 +82,10 @@ pub async fn save_batch(pool: &PgPool, events: &[BridgeEvent]) -> Result<()> {
             event.amount,
             event.nonce,
             event.block_number,
-            event.tx_hash
+            event.tx_hash,
+            event.source_token,
+            event.target_token,
+            event.target_amount
         )
         .execute(&mut *tx)
         .await?;
